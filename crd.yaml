@@ -19,7 +19,11 @@ spec:
       name: Age
       type: date
     - description: The Domain Name to host the instance under
-      jsonPath: .spec.domainName
+      jsonPath: .spec.site.domainName
+      name: DomainName
+      type: string
+    - description: The Cloudflare ZoneID
+      jsonPath: .spec.site.zoneID
       name: DomainName
       type: string
     - description: The HREF for the link
@@ -66,11 +70,14 @@ spec:
                     type: string
                   title:
                     type: string
+                  zoneID:
+                    type: string
                 required:
                 - attribution
                 - domainName
                 - quote
                 - title
+                - zoneID
                 type: object
             required:
             - certificate
