@@ -1,0 +1,8 @@
+apiVersion: controllers.illallangi.enterprises/v1
+kind: DNSRPZRecord
+spec:
+{%- for o in dimension_idx[namespace] | map(attribute='spec') | map(attribute='site')| map(attribute='domainName') | unique | sort %}
+- name: {{ o }}
+  selector: {{ selector }}
+  type: Selector
+{%- endfor %}

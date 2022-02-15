@@ -1,0 +1,119 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: dimension
+  name: dimension-controller
+  namespace: compute-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/name: dimension
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/name: dimension
+    spec:
+      containers:
+      - image: ghcr.io/illallangi/dimension-controller:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+        name: controller
+        ports:
+        - containerPort: 8080
+          name: web
+          protocol: TCP
+      serviceAccount: dimension-controller
+      serviceAccountName: dimension-controller
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: dimension
+  name: dimension-controller
+  namespace: compute-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: dimension
+  name: dimension-controller
+rules:
+- apiGroups:
+  - controllers.illallangi.enterprises
+  resources:
+  - dimensions
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - controllers.illallangi.enterprises
+  resources:
+  - dnsrpzrecords
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: dimension
+  name: dimension-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dimension-controller
+subjects:
+- kind: ServiceAccount
+  name: dimension-controller
+  namespace: compute-system

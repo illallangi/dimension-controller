@@ -1,0 +1,78 @@
+metadata:
+  annotations:
+    configmap.reloader.stakater.com/reload: {{ application_configmap['metadata']['name'] }}
+    secret.reloader.stakater.com/reload: {{ spec['certificate']['secretName'] }}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels: {{ selector }}
+  template:
+    metadata:
+      labels: {{ selector }}
+    spec:
+      containers: 
+      - env:
+        - name: K8S_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: K8S_APP_COMPONENT
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/component']
+        - name: K8S_APP_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/name']
+        - name: K8S_NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: K8S_PODNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        envFrom:
+        - configMapRef:
+            name: {{ application_configmap['metadata']['name'] }}
+        livenessProbe:
+          httpGet:
+            path: /.well-known/health
+            port: 5800
+            scheme: HTTP
+        image: "{{ dimension_idx[namespace] | map(attribute='spec') | map(attribute='image') | sort | first }}"
+        imagePullPolicy: IfNotPresent
+        startupProbe:
+          httpGet:
+            path: /.well-known/health
+            port: 5800
+            scheme: HTTP
+        name: dimension
+        ports:
+        - containerPort: 65080
+          name: web
+        - containerPort: 65443
+          name: web-secure
+        volumeMounts:
+        - mountPath: /etc/caddy
+          name: caddy
+      serviceAccount: {{ application_serviceaccount['metadata']['name'] }}
+      serviceAccountName: {{ application_serviceaccount['metadata']['name'] }}
+      volumes:
+      - name: caddy
+        projected:
+          sources:
+          - configMap:
+              items:
+              - key: Caddyfile
+                path: Caddyfile
+              name: {{ application_configmap['metadata']['name'] }}
+          - secret:
+              items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+              name: "{{ dimension_idx[namespace] | map(attribute='spec') | map(attribute='certificate') |map(attribute='secretName') | sort | first }}"

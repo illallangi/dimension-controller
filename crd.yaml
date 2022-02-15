@@ -1,0 +1,87 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    app.kubernetes.io/name: dimension
+  name: dimensions.controllers.illallangi.enterprises
+spec:
+  group: controllers.illallangi.enterprises
+  names:
+    kind: Dimension
+    plural: dimensions
+    singular: dimension
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Age of the Dimension instance
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - description: The Domain Name to host the instance under
+      jsonPath: .spec.domainName
+      name: DomainName
+      type: string
+    - description: The HREF for the link
+      jsonPath: .spec.link.href
+      name: HREF
+      type: string
+    - description: The Title for the link
+      jsonPath: .spec.link.title
+      name: Title
+      type: string
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              certificate:
+                properties:
+                  secretName:
+                    type: string
+                required:
+                - secretName
+                type: object
+              image:
+                default: ghcr.io/illallangi/dimension:v0.0.1
+                type: string
+              link:
+                properties:
+                  href:
+                    type: string
+                  title:
+                    type: string
+                required:
+                - href
+                - title
+                type: object
+              site:
+                properties:
+                  attribution:
+                    type: string
+                  domainName:
+                    type: string
+                  quote:
+                    type: string
+                  title:
+                    type: string
+                required:
+                - attribution
+                - domainName
+                - quote
+                - title
+                type: object
+            required:
+            - certificate
+            - site
+            - link
+            type: object
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
