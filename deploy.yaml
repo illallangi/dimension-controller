@@ -72,6 +72,16 @@ rules:
   - watch
   - patch
 - apiGroups:
+  - traefik.containo.us
+  resources:
+  - ingressroutetcps
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
   - ""
   resources:
   - configmaps
