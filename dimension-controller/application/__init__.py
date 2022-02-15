@@ -34,6 +34,12 @@ from .dnsrpzrecord import (
     application_dnsrpzrecord_idx,
 )
 
+from .cloudflarerecord import (
+    application_cloudflarerecord,
+    application_cloudflarerecord_probe,
+    application_cloudflarerecord_idx,
+)
+
 __all__ = [
     "application_service",
     "application_service_probe",
@@ -53,4 +59,7 @@ __all__ = [
     "application_dnsrpzrecord",
     "application_dnsrpzrecord_probe",
     "application_dnsrpzrecord_idx",
+    "application_cloudflarerecord",
+    "application_cloudflarerecord_probe",
+    "application_cloudflarerecord_idx",
 ]
