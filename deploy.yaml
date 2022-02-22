@@ -64,6 +64,7 @@ rules:
 - apiGroups:
   - controllers.illallangi.enterprises
   resources:
+  - cloudflarerecords
   - dnsrpzrecords
   verbs:
   - create

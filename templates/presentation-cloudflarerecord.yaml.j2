@@ -1,0 +1,23 @@
+apiVersion: controllers.illallangi.enterprises/v1
+kind: CloudFlareRecord
+metadata:
+  name: dimension-presentation
+  namespace: {{ namespace }}
+  ownerReferences:
+{%- for body in idx[namespace] %}
+  - apiVersion: {{ body['apiVersion'] }}
+    blockOwnerDeletion: true
+    controller: false
+    kind: {{ body['kind'] }}
+    name: {{ body['metadata']['name'] }}
+    uid: {{ body['metadata']['uid'] }}
+{%- endfor %}
+  labels:
+    {{ LABEL_NAME }}: dimension
+    {{ LABEL_COMPONENT }}: presentation
+    {{ LABEL_CONTROLLER }}: nu-dimension-controller
+spec: 
+{%- for body in idx[namespace] | json_filter('[].{domainName: spec.site.domainName, zoneID: spec.site.zoneID}') | unique_dict %}
+- fqdn: {{ body['domainName'] }}
+  zoneID: {{ body['zoneID'] }}
+{%- endfor %}

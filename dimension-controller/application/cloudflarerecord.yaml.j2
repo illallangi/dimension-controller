@@ -1,7 +1,0 @@
-apiVersion: controllers.illallangi.enterprises/v1
-kind: CloudFlareRecord
-spec: 
-{%- for o in dimension_idx[namespace] | map(attribute='spec') | map(attribute='site') %}
-- fqdn: {{ o['domainName'] }}
-  zoneID: {{ o['zoneID'] }}
-{%- endfor %}

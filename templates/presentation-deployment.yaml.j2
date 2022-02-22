@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    configmap.reloader.stakater.com/reload: dimension-presentation
+    secret.reloader.stakater.com/reload: {{ idx[namespace] | map(attribute='spec') | map(attribute='certificate') | map(attribute='secretName') | sort | first }}
+  name: dimension-presentation
+  namespace: {{ namespace }}
+  ownerReferences:
+{%- for body in idx[namespace] %}
+  - apiVersion: {{ body['apiVersion'] }}
+    blockOwnerDeletion: true
+    controller: false
+    kind: {{ body['kind'] }}
+    name: {{ body['metadata']['name'] }}
+    uid: {{ body['metadata']['uid'] }}
+{%- endfor %}
+  labels:
+    {{ LABEL_NAME }}: dimension
+    {{ LABEL_COMPONENT }}: presentation
+    {{ LABEL_CONTROLLER }}: nu-dimension-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{ LABEL_NAME }}: dimension
+      {{ LABEL_COMPONENT }}: presentation
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        {{ LABEL_NAME }}: dimension
+        {{ LABEL_COMPONENT }}: presentation
+    spec:
+      initContainers:
+{%- for body in idx[namespace] | json_filter("[?spec.link].{domainName: spec.site.domainName, title: spec.site.title, quote: spec.site.quote, attribution: spec.site.attribution}") | unique_dict %}
+      - args:
+        - cp
+        - -arv
+        - /var/www/html/*
+        - /mnt/scratch/
+        env:
+        - name: DIMENSION_TITLE
+          value: {{ body['title'] }}
+        - name: DIMENSION_QUOTE
+          value: {{ body['quote'] }}
+        - name: DIMENSION_ATTRIBUTION
+          value: {{ body['attribution'] }}
+{%- for link in idx[namespace] | json_filter("[?spec.link]|[?spec.site.domainName=='" + body['domainName'] + "']") %}
+        - name: DIMENSION_LINK_{{ loop.index }}_HREF
+          value: {{ link['spec']['link']['href'] }}
+        - name: DIMENSION_LINK_{{ loop.index }}_TITLE
+          value: {{ link['spec']['link']['title'] }}
+{%- endfor %}
+        name: dimension-{{ loop.index }}
+        image: ghcr.io/illallangi/dimension:v0.0.3
+        volumeMounts:
+        - mountPath: /mnt/scratch
+          name: scratch
+          subPath: {{ body['domainName'] }}/html
+{%- endfor %}
+      containers:
+      - env:
+        - name: K8S_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: K8S_APP_COMPONENT
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/component']
+        - name: K8S_APP_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/name']
+        - name: K8S_NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: K8S_PODNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        envFrom:
+        - configMapRef:
+            name: dimension-presentation
+        image: ghcr.io/illallangi/caddy:v0.0.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /.well-known/health
+            port: 5800
+            scheme: HTTP
+        name: dimension
+        ports:
+        - containerPort: 65080
+          name: web
+        - containerPort: 65443
+          name: web-secure
+        startupProbe:
+          httpGet:
+            path: /.well-known/health
+            port: 5800
+            scheme: HTTP
+        volumeMounts:
+        - mountPath: /etc/caddy
+          name: caddy
+{%- for body in idx[namespace] | json_filter("[].{domainName: spec.site.domainName}") | unique_dict %}
+        - mountPath: /var/www/{{ body['domainName'] }}
+          name: scratch
+          subPath: {{ body['domainName'] }}
+{%- for volume in idx[namespace] | json_filter("[?spec.volume]|[?spec.site.domainName=='" + body['domainName'] + "'].spec.volume") %}
+        - mountPath: /var/www/{{ body['domainName'] }}/html/{{ volume['path'] }}
+          name: {{ volume['claimName'] }}
+          subPath: {{ volume['subPath'] }}
+          readOnly: true
+{%- endfor %}
+{%- for webdav in idx[namespace] | json_filter("[?spec.webdav]|[?spec.site.domainName=='" + body['domainName'] + "'].spec.webdav") %}
+        - mountPath: /var/www/{{ body['domainName'] }}/webdav/{{ webdav['path'] }}
+          name: {{ webdav['claimName'] }}
+          subPath: {{ webdav['subPath'] }}
+{%- endfor %}
+{%- endfor %}
+      serviceAccount: dimension-presentation
+      serviceAccountName: dimension-presentation
+      volumes:
+      - name: caddy
+        projected:
+          sources:
+          - configMap:
+              items:
+              - key: Caddyfile
+                path: Caddyfile
+              name: dimension-presentation
+          - secret:
+              items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+              name: {{ idx[namespace] | map(attribute='spec') | map(attribute='certificate') |map(attribute='secretName') | sort | first }}
+      - emptyDir: {}
+        name: scratch
+{%- for claim in idx[namespace] | json_filter("[][spec.volume,spec.webdav]|[].claimName") | unique %}
+      - name: {{ claim }}
+        persistentVolumeClaim:
+          claimName: {{ claim }}
+{%- endfor %}

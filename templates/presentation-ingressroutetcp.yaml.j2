@@ -1,0 +1,30 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: dimension-presentation
+  namespace: {{ namespace }}
+  ownerReferences:
+{%- for body in idx[namespace] %}
+  - apiVersion: {{ body['apiVersion'] }}
+    blockOwnerDeletion: true
+    controller: false
+    kind: {{ body['kind'] }}
+    name: {{ body['metadata']['name'] }}
+    uid: {{ body['metadata']['uid'] }}
+{%- endfor %}
+  labels:
+    {{ LABEL_NAME }}: dimension
+    {{ LABEL_COMPONENT }}: presentation
+    {{ LABEL_CONTROLLER }}: nu-dimension-controller
+spec:
+  entryPoints:
+  - websecure
+  routes:
+{%- for body in idx[namespace] | json_filter('[].{domainName: spec.site.domainName}') | unique_dict %}
+  - match: HostSNI(`{{ body['domainName'] }}`)
+    services:
+    - name: dimension-presentation
+      port: 443
+{%- endfor %}
+  tls:
+    passthrough: true
