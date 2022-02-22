@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dimension-presentation
+  namespace: {{ namespace }}
+  ownerReferences:
+{%- for body in idx[namespace] %}
+  - apiVersion: {{ body['apiVersion'] }}
+    blockOwnerDeletion: true
+    controller: false
+    kind: {{ body['kind'] }}
+    name: {{ body['metadata']['name'] }}
+    uid: {{ body['metadata']['uid'] }}
+{%- endfor %}
+  labels:
+    {{ LABEL_NAME }}: dimension
+    {{ LABEL_COMPONENT }}: presentation
+    {{ LABEL_CONTROLLER }}: nu-dimension-controller
+spec:
+  ports:
+  - name: web
+    port: 80
+    targetPort: web
+  - name: web-secure
+    port: 443
+    targetPort: web-secure
+  selector:
+    {{ LABEL_NAME }}: dimension
+    {{ LABEL_COMPONENT }}: presentation
+  type: LoadBalancer

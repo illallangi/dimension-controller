@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dimension-presentation
+  namespace: {{ namespace }}
+  ownerReferences:
+{%- for body in idx[namespace] %}
+  - apiVersion: {{ body['apiVersion'] }}
+    blockOwnerDeletion: true
+    controller: false
+    kind: {{ body['kind'] }}
+    name: {{ body['metadata']['name'] }}
+    uid: {{ body['metadata']['uid'] }}
+{%- endfor %}
+  labels:
+    {{ LABEL_NAME }}: dimension
+    {{ LABEL_COMPONENT }}: presentation
+    {{ LABEL_CONTROLLER }}: nu-dimension-controller
+data:
+  Caddyfile: |-
+    {
+      admin off
+      http_port 65080
+      https_port 65443
+      debug
+    }
+{%- for body in idx[namespace] | json_filter('[].{domainName: spec.site.domainName}') | unique_dict %}
+    {{ body['domainName'] }}:65443 {
+      tls /etc/caddy/tls.crt /etc/caddy/tls.key
+      @health {
+        path /.well-known/health
+      }
+      @teapot {
+        path /.well-known/teapot
+      }
+      @webdav {
+        path /*
+        header_regexp User-Agent Microsoft-WebDAV-MiniRedir.*
+      }
+      @default {
+        path /*
+      }
+      route @health {
+        respond 200 {
+          body "Caddy
+    Pod {$K8S_NAMESPACE}\{$K8S_PODNAME}
+    Application {$K8S_APP_NAME}
+    Component {$K8S_APP_COMPONENT}
+    Node {$K8S_NODENAME}"
+        }
+      }
+      route @teapot {
+        teapot
+      }
+      route @webdav {
+        basicauth {
+          admin JDJhJDE0JEhvT0t0TS5JU3dOaWVTODk5bzhpaU9BTUZKU2wxd0NTbWZNZURBbHdsL1o5NGdqZk83aVlL
+        }
+        root * /var/www/{{ body['domainName'] }}/webdav
+        webdav
+      }
+      route @default {
+        file_server browse {
+          root /var/www/{{ body['domainName'] }}/html
+        }
+      }
+    }
+{%- endfor %}
+    :5800 {
+      respond /.well-known/health 200
+    }

@@ -22,10 +22,6 @@ spec:
       jsonPath: .spec.site.domainName
       name: DomainName
       type: string
-    - description: The Cloudflare ZoneID
-      jsonPath: .spec.site.zoneID
-      name: DomainName
-      type: string
     - description: The HREF for the link
       jsonPath: .spec.link.href
       name: HREF
@@ -39,17 +35,20 @@ spec:
       openAPIV3Schema:
         properties:
           spec:
+            oneOf:
+            - required:
+              - certificate
+              - site
+              - link
+            - required:
+              - certificate
+              - site
+              - volume
+            - required:
+              - certificate
+              - site
+              - webdav
             properties:
-              certificate:
-                properties:
-                  secretName:
-                    type: string
-                required:
-                - secretName
-                type: object
-              image:
-                default: ghcr.io/illallangi/dimension:v0.0.3
-                type: string
               link:
                 properties:
                   href:
@@ -59,6 +58,39 @@ spec:
                 required:
                 - href
                 - title
+                type: object
+              volume:
+                properties:
+                  claimName:
+                    type: string
+                  subPath:
+                    type: string
+                    default: ""
+                  path:
+                    type: string
+                required:
+                - claimName
+                - path
+                type: object
+              webdav:
+                properties:
+                  claimName:
+                    type: string
+                  subPath:
+                    type: string
+                    default: ""
+                  path:
+                    type: string
+                required:
+                - claimName
+                - path
+                type: object
+              certificate:
+                properties:
+                  secretName:
+                    type: string
+                required:
+                - secretName
                 type: object
               site:
                 properties:
@@ -79,10 +111,6 @@ spec:
                 - title
                 - zoneID
                 type: object
-            required:
-            - certificate
-            - site
-            - link
             type: object
           status:
             type: object

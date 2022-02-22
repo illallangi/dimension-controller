@@ -1,18 +1,7 @@
-# Main image
-FROM docker.io/library/python:3.10.2
+FROM ghcr.io/illallangi/nu-controller:v0.0.1
 
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONIOENCODING=UTF-8 \
-    LC_ALL=en_US.UTF-8 \
-    LANG=en_US.UTF-8 \
-    XDG_CONFIG_HOME=/config
+ENV CRD_GROUP="controllers.illallangi.enterprises" \
+    CRD_VERSION="v1" \
+    CRD_SINGULAR="dimension"
 
-WORKDIR /usr/src/app
-
-COPY ./requirements.txt /usr/src/app/requirements.txt
-RUN python -m pip install -r requirements.txt
-
-ADD . /usr/src/app
-RUN python -m pip install --use-feature=in-tree-build .
-
-CMD kopf run --all-namespaces --liveness=http://0.0.0.0:8080/healthz -m dimension-controller
+ADD templates /config/templates
